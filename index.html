@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>수룡이 옷입히기</title>
+    
+    <!-- 이미지 저장을 위한 라이브러리 -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #fce4ec; 
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-wrapper {
+            width: 100%;
+            max-width: 400px;
+            height: 680px; 
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 1. 시작 화면 */
+        #start-screen {
+            width: 100%;
+            height: 100%;
+            background-image: url('start.png'); 
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;   
+            padding-bottom: 80px;    
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 100; 
+            background-color: #fff;
+        }
+
+        .start-btn {
+            background-color: #5f27cd; 
+            color: white;
+            border: 3px solid #fff;
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .start-btn:active { transform: scale(0.95); }
+
+        /* 2. 메인 게임 영역 */
+        #main-game-area {
+            display: none; 
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 📸 사진으로 저장될 배경 영역 */
+        #capture-area {
+            position: relative;
+            width: 100%;
+            height: 400px; 
+            background-image: url('back3.png'); /* 기본 배경을 back3(수룡이 발바닥)으로 설정 */
+            background-size: cover; 
+            background-position: center;
+            border-bottom: 2px solid #eee;
+            overflow: hidden;
+        }
+
+        /* 💡 수룡이와 옷을 하나로 묶어주는 그룹 (배경 단계에서 통째로 움직임) */
+        #character-group {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+        }
+
+        .layer { position: absolute; display: none; }
+        
+        #layer-base {
+            position: absolute;
+            display: block; 
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 320px;
+            z-index: 10;
+        }
+
+        #layer-bottom { z-index: 20; }
+        #layer-top    { z-index: 30; }
+        #layer-acc    { z-index: 40; }
+
+        .draggable { cursor: grab; }
+        .draggable:active { cursor: grabbing; }
+
+        /* 하단 조작부 공통 */
+        .bottom-panel {
+            flex: 1; display: flex; flex-direction: column; background: white;
+        }
+
+        /* =========================================
+           [패널 A] 옷 고르기 UI
+           ========================================= */
+        #panel-dressup { display: flex; flex-direction: column; height: 100%; }
+
+        .tabs { display: flex; background-color: #fafafa; }
+        .tab {
+            flex: 1; padding: 12px 0; text-align: center; font-size: 15px; font-weight: bold;
+            color: #999; cursor: pointer; border-bottom: 3px solid transparent;
+        }
+        .tab.active { color: #ff6b81; border-bottom: 3px solid #ff6b81; background-color: white; }
+
+        .item-list {
+            display: none; padding: 15px; grid-template-columns: repeat(4, 1fr); gap: 15px;
+            flex: 1; overflow-y: auto; align-content: flex-start;
+        }
+        .item-list.active { display: grid; }
+        
+        .item-btn {
+            aspect-ratio: 1 / 1; border: 2px solid #eee; border-radius: 12px; background-color: #fff;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 12px; font-weight: bold; color: #555; text-align: center;
+        }
+        .item-btn:active { background-color: #ffeef0; border-color: #ff6b81; transform: scale(0.95); }
+        .btn-remove { color: #ff4757; font-size: 24px; }
+
+        .next-step-btn {
+            margin: 10px 15px 15px; padding: 12px; border-radius: 10px; border: none;
+            background-color: #6c5ce7; color: white; font-weight: bold; font-size: 16px; cursor: pointer;
+        }
+
+        /* =========================================
+           [패널 B] 배경 고르기 & 저장 UI
+           ========================================= */
+        #panel-background { display: none; flex-direction: column; padding: 20px; height: 100%; box-sizing: border-box;}
+        
+        .bg-title { text-align: center; font-weight: bold; color: #333; margin-top: 0; margin-bottom: 10px; font-size: 14px;}
+        
+        /* 💡 크기 조절 슬라이더 디자인 */
+        .size-control {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px; 
+            padding: 10px 15px; background: #f8f9fa; border-radius: 10px;
+        }
+        .size-control label { font-weight: bold; font-size: 13px; color: #555; white-space: nowrap; }
+        .size-control input[type=range] { flex: 1; accent-color: #ff6b81; }
+
+        .bg-list {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex: 1; align-content: flex-start;
+        }
+        .bg-btn {
+            padding: 12px; border: 2px solid #eee; border-radius: 10px; background: #fff;
+            font-weight: bold; color: #555; cursor: pointer; text-align: center; font-size: 13px;
+        }
+        .bg-btn:active { background: #ffeef0; border-color: #ff6b81; color: #ff6b81; }
+
+        .action-btns { display: flex; gap: 10px; margin-top: auto; }
+        .btn-back {
+            flex: 1; padding: 12px; border: none; border-radius: 10px; background: #dfe6e9;
+            color: #2d3436; font-weight: bold; cursor: pointer; font-size: 15px;
+        }
+        .btn-save {
+            flex: 1; padding: 12px; border: none; border-radius: 10px; background: #ff6b81;
+            color: white; font-weight: bold; cursor: pointer; font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <!-- [1] 시작 화면 -->
+        <div id="start-screen">
+            <button class="start-btn" onclick="startGame()">게임 시작</button>
+        </div>
+
+        <!-- [2] 메인 게임 영역 -->
+        <div id="main-game-area">
+            
+            <!-- 📸 실제 캡처 영역 -->
+            <div id="capture-area">
+                <!-- 💡 수룡이와 옷들을 하나의 그룹으로 묶음 -->
+                <div id="character-group">
+                    <img src="수룡이.png" id="layer-base" alt="수룡이">
+                    <img src="" id="layer-bottom" class="layer draggable" alt="하의">
+                    <img src="" id="layer-top" class="layer draggable" alt="상의">
+                    <img src="" id="layer-acc" class="layer draggable" alt="장신구">
+                </div>
+            </div>
+
+            <!-- 하단 조작부 -->
+            <div class="bottom-panel">
+                
+                <!-- 패널 A: 옷입히기 -->
+                <div id="panel-dressup">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('top')">상의</div>
+                        <div class="tab" onclick="switchTab('bottom')">하의</div>
+                        <div class="tab" onclick="switchTab('acc')">장신구</div>
+                    </div>
+
+                    <div id="tab-top" class="item-list active">
+                        <button class="item-btn btn-remove" onclick="equipItem('layer-top', null)">✖</button>
+                        <button class="item-btn" onclick="equipItem('layer-top', topData.saekdong)">색동</button>
+                    </div>
+                    <div id="tab-bottom" class="item-list">
+                        <button class="item-btn btn-remove" onclick="equipItem('layer-bottom', null)">✖</button>
+                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.pinkPants)">분홍바지</button>
+                    </div>
+                    <div id="tab-acc" class="item-list">
+                        <button class="item-btn btn-remove" onclick="equipItem('layer-acc', null)">✖</button>
+                        <button class="item-btn" onclick="equipItem('layer-acc', accData.goldHat)">금박모자</button>
+                    </div>
+
+                    <button class="next-step-btn" onclick="goToBackgroundStep()">배경 선택 & 저장하기 ➔</button>
+                </div>
+
+                <!-- 패널 B: 배경 고르기 -->
+                <div id="panel-background">
+                    <p class="bg-title">화면을 드래그해 수룡이 위치를 맞춰보세요!</p>
+                    
+                    <!-- 💡 크기 조절 슬라이더 -->
+                    <div class="size-control">
+                        <label>크기 조절</label>
+                        <input type="range" id="size-slider" min="0.5" max="1.5" step="0.05" value="1" oninput="resizeCharacter(this.value)">
+                    </div>
+                    
+                    <!-- 💡 배경 이미지 버튼 3개로 수정 완료 -->
+                    <div class="bg-list">
+                        <button class="bg-btn" onclick="changeBackground('back1.png')">성신 잔디밭</button>
+                        <button class="bg-btn" onclick="changeBackground('back2.png')">박물관 수룡</button>
+                        <button class="bg-btn" onclick="changeBackground('back3.png')">수룡이 발바닥</button>
+                    </div>
+
+                    <div class="action-btns">
+                        <button class="btn-back" onclick="goToDressupStep()">⬅ 옷 수정</button>
+                        <button class="btn-save" onclick="saveCharacter()">📸 앨범에 저장</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 단계 전환 및 상태 관리 ---
+        let currentStep = 'dressup'; // 현재 단계 ('dressup' 또는 'background')
+        let currentScale = 1; // 캐릭터 스케일
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('main-game-area').style.display = 'flex';
+        }
+
+        function goToBackgroundStep() {
+            currentStep = 'background';
+            document.getElementById('panel-dressup').style.display = 'none';
+            document.getElementById('panel-background').style.display = 'flex';
+        }
+
+        function goToDressupStep() {
+            currentStep = 'dressup';
+            document.getElementById('panel-background').style.display = 'none';
+            document.getElementById('panel-dressup').style.display = 'flex';
+            
+            // 💡 옷을 다시 세밀하게 입힐 수 있도록 수룡이 크기와 위치를 정중앙으로 초기화합니다.
+            const group = document.getElementById('character-group');
+            group.style.left = '0px';
+            group.style.top = '0px';
+            group.style.transform = 'scale(1)';
+            document.getElementById('size-slider').value = 1;
+            currentScale = 1;
+        }
+
+        // --- 2. 배경 및 크기 변경 ---
+        function changeBackground(bgImageSrc) {
+            document.getElementById('capture-area').style.backgroundImage = `url('${bgImageSrc}')`;
+        }
+
+        function resizeCharacter(scale) {
+            currentScale = scale;
+            document.getElementById('character-group').style.transform = `scale(${currentScale})`;
+        }
+
+        // --- 3. 이미지 캡처 저장 ---
+        function saveCharacter() {
+            const captureArea = document.getElementById('capture-area');
+            html2canvas(captureArea).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '수룡이_코디.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // --- 4. 옷 데이터 및 탭 전환 ---
+        const topData = { saekdong: { src: '수룡_상의1.png', width: '195px', top: '190px', left: '90px' } };
+        const bottomData = { pinkPants: { src: '수룡_하의1.png', width: '175px', top: '240px', left: '145px' } };
+        const accData = { goldHat: { src: '수룡_모자1.png', width: '200px', top: '40px', left: '130px' } };
+
+        function switchTab(category) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.item-list').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + category).classList.add('active');
+        }
+
+        function equipItem(layerId, itemData) {
+            const layer = document.getElementById(layerId);
+            if (itemData === null) {
+                layer.style.display = 'none';
+                layer.src = '';
+            } else {
+                layer.src = itemData.src;
+                layer.style.width = itemData.width;
+                layer.style.top = itemData.top;
+                layer.style.left = itemData.left;
+                layer.style.display = 'block';
+            }
+        }
+
+        // --- 5. 스마트 드래그 앤 드롭 기능 ---
+        let activeItem = null;
+        let startX = 0, startY = 0;
+        let initialLeft = 0, initialTop = 0;
+
+        // 화면 캡처 영역 어디서든 드래그 이벤트를 감지합니다.
+        const captureArea = document.getElementById('capture-area');
+        captureArea.addEventListener('mousedown', dragStart);
+        captureArea.addEventListener('touchstart', dragStart, { passive: false });
+        
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchmove', dragMove, { passive: false });
+        document.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            if (currentStep === 'dressup') {
+                // 옷입히기 단계: 클릭한 특정 옷만 움직입니다.
+                if (e.target.classList.contains('draggable') && e.target.style.display !== 'none') {
+                    activeItem = e.target;
+                } else return;
+            } else if (currentStep === 'background') {
+                // 배경 선택 단계: 화면을 누르면 수룡이 전체가 한 몸으로 움직입니다.
+                activeItem = document.getElementById('character-group');
+            }
+
+            if (activeItem) {
+                const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                startX = clientX;
+                startY = clientY;
+                initialLeft = parseInt(activeItem.style.left || 0, 10);
+                initialTop = parseInt(activeItem.style.top || 0, 10);
+            }
+        }
+
+        function dragMove(e) {
+            if (!activeItem) return;
+            e.preventDefault(); 
+            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            
+            activeItem.style.left = `${initialLeft + dx}px`;
+            activeItem.style.top = `${initialTop + dy}px`;
+        }
+
+        function dragEnd() { 
+            activeItem = null; 
+        }
+    </script>
+</body>
+</html>
