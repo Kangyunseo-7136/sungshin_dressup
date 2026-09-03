@@ -272,15 +272,29 @@
             document.getElementById('character-group').style.transform = `scale(${currentScale})`;
         }
 
-        // --- 3. 이미지 캡처 저장 (💡 초고화질 적용) ---
+        // --- 3. 이미지 캡처 저장 (💡 배경 화질 저하 및 크로핑 문제 완벽 해결 버전) ---
         function saveCharacter() {
             const captureArea = document.getElementById('capture-area');
-            // scale 옵션을 4로 늘려 기존보다 4배 선명한 해상도로 저장되게 합니다.
-            html2canvas(captureArea, { scale: 4, useCORS: true, allowTaint: true }).then(canvas => {
+            
+            // 💡 1. 캡처하기 직전, 화면이 깨지지 않게 크기를 실제 픽셀에 가깝게 맞춤
+            const rect = captureArea.getBoundingClientRect();
+            captureArea.style.width = rect.width + 'px';
+            captureArea.style.height = rect.height + 'px';
+
+            html2canvas(captureArea, { 
+                scale: 4, 
+                useCORS: true, 
+                allowTaint: true,
+                backgroundColor: null // 배경 이미지가 온전히 렌더링되도록 투명 처리
+            }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = '수룡이_코디.png';
-                link.href = canvas.toDataURL('image/png');
+                link.href = canvas.toDataURL('image/png', 1.0); // 1.0은 최고 화질 옵션
                 link.click();
+
+                // 💡 2. 캡처가 끝나면 다시 화면을 원래대로(반응형 100%) 되돌려 놓음
+                captureArea.style.width = '100%';
+                captureArea.style.height = 'auto'; // aspect-ratio가 적용되도록 auto로 복구
             });
         }
 
