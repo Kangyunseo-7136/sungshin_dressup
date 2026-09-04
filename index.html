@@ -83,17 +83,14 @@
             border-bottom: 2px solid #eee;
             overflow: hidden;
             background-color: #fff;
+            flex-shrink: 0;
         }
 
-        /* 💡 배경 화질 저하 방지를 위해 CSS background 대신 <img> 태그 사용 */
+        /* 💡 배경이 임의로 1:1 컷팅되지 않고 자연스럽게 크기를 갖도록 object-fit 제거 */
         #bg-img {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover; 
             z-index: 1; 
+            transform-origin: center center;
         }
 
         /* 수룡이와 옷을 하나로 묶어주는 그룹 */
@@ -105,6 +102,13 @@
             left: 0;
             transform-origin: center center;
             z-index: 5; 
+            /* 빈 공간 클릭 시 클릭이 통과되어 배경을 잡을 수 있도록 허용! */
+            pointer-events: none; 
+        }
+
+        /* 빈 공간은 클릭이 통과되더라도 수룡이와 옷은 다시 클릭 가능하게 설정 */
+        #character-group img {
+            pointer-events: auto; 
         }
 
         .layer { position: absolute; display: none; }
@@ -141,13 +145,14 @@
         }
         .tab.active { color: #ff6b81; border-bottom: 3px solid #ff6b81; background-color: white; }
         
-        /* 가로 스크롤(스와이프) 적용, 눈에 보이는 스크롤바는 숨김 */
+        /* 💡 가로 스크롤(스와이프) 유지 & 상하 여백 꽉 차게 변경 */
         .item-list {
-            display: none; padding: 15px; gap: 12px;
+            display: none; padding: 0 15px; gap: 15px;
+            flex: 1; /* 💡 세로 남는 공간을 모두 차지하도록 변경 */
             overflow-x: auto; 
             overflow-y: hidden;
             white-space: nowrap; 
-            align-items: center;
+            align-items: center; /* 💡 세로 기준 한가운데 정렬 */
             -ms-overflow-style: none; 
             scrollbar-width: none; 
         }
@@ -157,23 +162,32 @@
 
         .item-list.active { display: flex; }
         
+        /* 💡 버튼 크기를 아주 큼직하게 1줄로 확장 */
         .item-btn {
             flex: 0 0 auto; 
-            width: 65px; height: 65px; 
-            border: 2px solid #eee; border-radius: 12px; background-color: #fff;
+            width: 100px; height: 100px; /* 65px -> 100px로 대폭 확대 */
+            border: 2px solid #eee; border-radius: 16px; background-color: #fff;
             cursor: pointer; display: flex; justify-content: center; align-items: center;
-            font-size: 12px; font-weight: bold; color: #555; text-align: center;
+            font-size: 14px; font-weight: bold; color: #555; text-align: center; /* 폰트 크기 확대 */
+            white-space: normal; /* 긴 글씨는 안에서 줄바꿈 허용 */
+            word-break: keep-all; 
+            padding: 5px; box-sizing: border-box;
         }
         .item-btn:active { background-color: #ffeef0; border-color: #ff6b81; transform: scale(0.95); }
-        .btn-remove { color: #ff4757; font-size: 24px; }
+        .btn-remove { color: #ff4757; font-size: 32px; } /* X 아이콘도 비례해서 확대 */
         .next-step-btn { margin: auto 15px 15px 15px; padding: 12px; border-radius: 10px; border: none; background-color: #6c5ce7; color: white; font-weight: bold; font-size: 16px; cursor: pointer; flex-shrink: 0; }
 
         /* 패널 B: 배경 고르기 */
         #panel-background { display: none; flex-direction: column; padding: 20px; height: 100%; box-sizing: border-box;}
         .bg-title { text-align: center; font-weight: bold; color: #333; margin-top: 0; margin-bottom: 10px; font-size: 14px;}
-        .size-control { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding: 10px 15px; background: #f8f9fa; border-radius: 10px; }
-        .size-control label { font-weight: bold; font-size: 13px; color: #555; white-space: nowrap; }
-        .size-control input[type=range] { flex: 1; accent-color: #ff6b81; }
+        
+        .size-control-group {
+            display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; 
+            padding: 10px 15px; background: #f8f9fa; border-radius: 10px;
+        }
+        .size-control { display: flex; align-items: center; gap: 10px; }
+        .size-control label { font-weight: bold; font-size: 13px; color: #555; width: 65px; }
+        .size-control input[type=range] { flex: 1; }
         
         .bg-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex: 1; align-content: flex-start; }
         .bg-btn { padding: 12px; border: 2px solid #eee; border-radius: 10px; background: #fff; font-weight: bold; color: #555; cursor: pointer; text-align: center; font-size: 13px; }
@@ -197,7 +211,7 @@
             
             <!-- 📸 실제 캡처 영역 -->
             <div id="capture-area">
-                <img src="back3.png" id="bg-img" alt="배경">
+                <img id="bg-img" alt="배경">
                 
                 <div id="character-group">
                     <img src="수룡이.png" id="layer-base" alt="수룡이">
@@ -222,32 +236,32 @@
                     <!-- 상의 아이템 목록 -->
                     <div id="tab-top" class="item-list active">
                         <button class="item-btn btn-remove" onclick="equipItem('layer-top', null)">✖</button>
-                        <button class="item-btn" onclick="equipItem('layer-top', topData.saekdong)">색동</button>
-                        <button class="item-btn" onclick="equipItem('layer-top', topData.yellowTop)">노란저고리</button>
-                        <button class="item-btn" onclick="equipItem('layer-top', topData.whiteTop)">흰저고리</button>
+                        <button class="item-btn" onclick="equipItem('layer-top', topData.saekdong)">노란저고리</button>
+                        <button class="item-btn" onclick="equipItem('layer-top', topData.yellowTop)">금박색동저고리</button>
+                        <button class="item-btn" onclick="equipItem('layer-top', topData.whiteTop)">적삼</button>
                     </div>
 
                     <!-- 하의 아이템 목록 -->
                     <div id="tab-bottom" class="item-list">
                         <button class="item-btn btn-remove" onclick="equipItem('layer-bottom', null)">✖</button>
-                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.pinkPants)">분홍바지</button>
-                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.redSkirt)">빨간치마</button>
-                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.yellowSkirt)">노란치마</button>
-                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.whitePants)">흰바지</button>
+                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.pinkPants)">조끼허리바지</button>
+                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.redSkirt)">금박치마</button>
+                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.yellowSkirt)">노란한복치마</button>
+                        <button class="item-btn" onclick="equipItem('layer-bottom', bottomData.whitePants)">전통한복바지</button>
                     </div>
 
                     <!-- 신발 아이템 목록 -->
                     <div id="tab-shoes" class="item-list">
                         <button class="item-btn btn-remove" onclick="equipItem('layer-shoes', null)">✖</button>
-                        <button class="item-btn" onclick="equipItem('layer-shoes', shoesData.redShoes)">빨간신발</button>
+                        <button class="item-btn" onclick="equipItem('layer-shoes', shoesData.redShoes)">전통가죽신</button>
                         <button class="item-btn" onclick="equipItem('layer-shoes', shoesData.strawShoes)">짚신</button>
                     </div>
 
                     <!-- 장신구 아이템 목록 (여러 개 추가) -->
                     <div id="tab-acc" class="item-list">
                         <button class="item-btn btn-remove" onclick="addAccessory(null)">✖</button>
-                        <button class="item-btn" onclick="addAccessory(accData.goldHat)">금박모자</button>
-                        <button class="item-btn" onclick="addAccessory(accData.handMirror)">거울</button>
+                        <button class="item-btn" onclick="addAccessory(accData.goldHat)">복건</button>
+                        <button class="item-btn" onclick="addAccessory(accData.handMirror)">자수 거울</button>
                     </div>
 
                     <button class="next-step-btn" onclick="goToBackgroundStep()">배경 선택 & 저장하기 ➔</button>
@@ -255,20 +269,25 @@
 
                 <!-- 패널 B: 배경 고르기 -->
                 <div id="panel-background">
-                    <p class="bg-title">화면을 드래그해 수룡이 위치를 맞춰보세요!</p>
+                    <p class="bg-title">배경이나 수룡이를 자유롭게 드래그해보세요!</p>
                     
-                    <div class="size-control">
-                        <label>크기 조절</label>
-                        <input type="range" id="size-slider" min="0.5" max="1.5" step="0.05" value="1" oninput="resizeCharacter(this.value)">
+                    <!-- 배경과 수룡이를 각각 조절하는 슬라이더 -->
+                    <div class="size-control-group">
+                        <div class="size-control">
+                            <label>수룡이</label>
+                            <input type="range" id="size-slider" min="0.5" max="1.5" step="0.05" value="1" style="accent-color: #ff6b81;" oninput="resizeCharacter(this.value)">
+                        </div>
+                        <div class="size-control">
+                            <label>배경 크기</label>
+                            <input type="range" id="bg-size-slider" min="0.5" max="3.0" step="0.05" value="1" style="accent-color: #6c5ce7;" oninput="resizeBackground(this.value)">
+                        </div>
                     </div>
                     
                     <div class="bg-list">
-                        <!-- 💡 파일 업로드를 위한 숨겨진 input 태그 추가 -->
+                        <!-- 파일 업로드를 위한 숨겨진 input 태그 추가 -->
                         <input type="file" id="bg-upload" accept="image/*" style="display: none;" onchange="uploadBackground(event)">
                         
-                        <!-- 💡 내 앨범 사진 불러오기 버튼 추가 -->
                         <button class="bg-btn" onclick="document.getElementById('bg-upload').click()" style="color: #6c5ce7;">📸 내 앨범 사진</button>
-                        
                         <button class="bg-btn" onclick="changeBackground('back1.png')">성신 잔디밭</button>
                         <button class="bg-btn" onclick="changeBackground('back2.png')">박물관 수룡</button>
                         <button class="bg-btn" onclick="changeBackground('back3.png')">수룡이 발바닥</button>
@@ -287,8 +306,12 @@
     <script>
         let currentStep = 'dressup';
         let currentScale = 1;
-        // 💡 가장 먼저 고른 옷이 최상단이 되도록, 시작 숫자를 1000으로 잡고 점점 낮춰 밑으로 깔리게 함
         let globalZIndex = 1000; 
+
+        // 페이지가 로드되면 기본 배경(back3)을 부릅니다.
+        window.addEventListener('DOMContentLoaded', () => {
+            changeBackground('back3.png');
+        });
 
         function startGame() {
             document.getElementById('start-screen').style.display = 'none';
@@ -305,34 +328,76 @@
             currentStep = 'dressup';
             document.getElementById('panel-background').style.display = 'none';
             document.getElementById('panel-dressup').style.display = 'flex';
-            
-            const group = document.getElementById('character-group');
-            group.style.left = '0px';
-            group.style.top = '0px';
-            group.style.transform = 'scale(1)';
-            document.getElementById('size-slider').value = 1;
-            currentScale = 1;
         }
 
+        // 버튼으로 기본 제공 배경을 선택할 때
         function changeBackground(bgImageSrc) {
-            document.getElementById('bg-img').src = bgImageSrc;
+            const bgImg = document.getElementById('bg-img');
+            bgImg.src = bgImageSrc;
+            bgImg.style.transform = 'scale(1)';
+            document.getElementById('bg-size-slider').value = 1;
+            alignBackgroundToCenter(bgImg);
         }
 
-        // 💡 앨범에서 사진을 불러와 배경으로 적용하는 함수 추가
+        // 앨범에서 사진을 불러왔을 때 
         function uploadBackground(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById('bg-img').src = e.target.result;
+                    const bgImg = document.getElementById('bg-img');
+                    bgImg.src = e.target.result;
+                    bgImg.style.transform = 'scale(1)';
+                    document.getElementById('bg-size-slider').value = 1;
+                    alignBackgroundToCenter(bgImg);
                 };
                 reader.readAsDataURL(file);
+            }
+        }
+
+        // 💡 수정완료: 화면 렌더링(display:none) 오류 무시하고 무조건 400x400 기준으로 딱 맞게 계산
+        function alignBackgroundToCenter(bgImg) {
+            const align = () => {
+                if (!bgImg.naturalWidth) return;
+                
+                const contW = 400; // 고정된 1:1 창 너비
+                const contH = 400; // 고정된 1:1 창 높이
+                
+                const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+                const contRatio = contW / contH;
+                
+                let imgW, imgH;
+                if (imgRatio > contRatio) {
+                    imgH = contH;
+                    imgW = contH * imgRatio;
+                    bgImg.style.height = '100%';
+                    bgImg.style.width = 'auto';
+                } else {
+                    imgW = contW;
+                    imgH = contW / imgRatio;
+                    bgImg.style.width = '100%';
+                    bgImg.style.height = 'auto';
+                }
+                
+                // offset 값 대신 절대 수치로 계산하여 강제로 중앙 고정
+                bgImg.style.left = (contW - imgW) / 2 + 'px';
+                bgImg.style.top = (contH - imgH) / 2 + 'px';
+            };
+
+            if (bgImg.complete && bgImg.naturalWidth) {
+                align();
+            } else {
+                bgImg.onload = align;
             }
         }
 
         function resizeCharacter(scale) {
             currentScale = scale;
             document.getElementById('character-group').style.transform = `scale(${currentScale})`;
+        }
+
+        function resizeBackground(scale) {
+            document.getElementById('bg-img').style.transform = `scale(${scale})`;
         }
 
         function saveCharacter() {
@@ -360,7 +425,7 @@
             pinkPants: { src: '수룡_하의1.png', width: '175px', top: '240px', left: '145px' },
             redSkirt: { src: '수룡_하의2.png', width: '180px', top: '240px', left: '100px' }, 
             yellowSkirt: { src: '수룡_하의3.png', width: '200px', top: '240px', left: '100px' },
-            whitePants: { src: '수룡_하의4.png', width: '125px', top: '240px', left: '110px' } 
+            whitePants: { src: '수룡_하의4.png', width: '120px', top: '240px', left: '110px' } 
         };
 
         const shoesData = { 
@@ -391,7 +456,6 @@
                 layer.style.top = itemData.top;
                 layer.style.left = itemData.left;
                 layer.style.display = 'block';
-                // 옷을 입힐 때마다 순차적으로 숫자가 작아짐 = 나중에 누른 옷이 기존 옷 아래로 들어감
                 layer.style.zIndex = globalZIndex--; 
             }
         }
@@ -408,7 +472,6 @@
                 img.style.top = itemData.top;
                 img.style.left = itemData.left;
                 img.style.display = 'block';
-                // 장신구도 마찬가지로 추가할 때마다 순차적으로 밑으로 들어감
                 img.style.zIndex = globalZIndex--; 
                 document.getElementById('character-group').appendChild(img);
             }
@@ -431,10 +494,13 @@
             if (currentStep === 'dressup') {
                 if (e.target.classList.contains('draggable') && e.target.style.display !== 'none') {
                     activeItem = e.target;
-                    // 드래그할 때 순서가 뒤섞이는 현상을 방지하기 위해 터치 시 z-index 변경을 삭제했습니다.
                 } else return;
             } else if (currentStep === 'background') {
-                activeItem = document.getElementById('character-group');
+                if (e.target.id === 'bg-img') {
+                    activeItem = document.getElementById('bg-img');
+                } else {
+                    activeItem = document.getElementById('character-group');
+                }
             }
 
             if (activeItem) {
@@ -442,8 +508,8 @@
                 const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
                 startX = clientX;
                 startY = clientY;
-                initialLeft = parseInt(activeItem.style.left || 0, 10);
-                initialTop = parseInt(activeItem.style.top || 0, 10);
+                initialLeft = parseFloat(activeItem.style.left) || 0;
+                initialTop = parseFloat(activeItem.style.top) || 0;
             }
         }
 
