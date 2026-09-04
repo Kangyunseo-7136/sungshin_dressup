@@ -355,7 +355,6 @@
             }
         }
 
-        // 💡 수정완료: 화면 렌더링(display:none) 오류 무시하고 무조건 400x400 기준으로 딱 맞게 계산
         function alignBackgroundToCenter(bgImg) {
             const align = () => {
                 if (!bgImg.naturalWidth) return;
@@ -400,18 +399,75 @@
             document.getElementById('bg-img').style.transform = `scale(${scale})`;
         }
 
+        // 💡 직관적인 팝업 오버레이 저장 기능으로 업그레이드!
         function saveCharacter() {
             const captureArea = document.getElementById('capture-area');
 
+            // 화질 좋게 캡처
             html2canvas(captureArea, { 
                 scale: 4, 
                 useCORS: true, 
                 backgroundColor: null
             }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = '수룡이_코디.png';
-                link.href = canvas.toDataURL('image/png', 1.0); 
-                link.click();
+                const imgDataUrl = canvas.toDataURL('image/png', 1.0);
+
+                // 화면 전체를 덮는 까만 배경(오버레이) 만들기
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0'; 
+                overlay.style.left = '0';
+                overlay.style.width = '100vw'; 
+                overlay.style.height = '100vh';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+                overlay.style.zIndex = '9999';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+
+                // 완성된 수룡이 이미지 띄우기
+                const resultImg = document.createElement('img');
+                resultImg.src = imgDataUrl;
+                resultImg.style.width = '80%';
+                resultImg.style.maxWidth = '350px';
+                resultImg.style.borderRadius = '15px';
+                resultImg.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+
+                // 안내 텍스트 띄우기
+                const text = document.createElement('p');
+                text.innerText = "📸 이미지를 꾹 눌러서\n[사진 앱에 저장]을 선택하세요!";
+                text.style.color = 'white';
+                text.style.fontSize = '18px';
+                text.style.fontWeight = 'bold';
+                text.style.textAlign = 'center';
+                text.style.marginTop = '25px';
+                text.style.lineHeight = '1.5';
+
+                // 닫기 버튼
+                const closeBtn = document.createElement('button');
+                closeBtn.innerText = "✖ 닫기";
+                closeBtn.style.marginTop = '20px';
+                closeBtn.style.padding = '12px 30px';
+                closeBtn.style.border = 'none';
+                closeBtn.style.borderRadius = '20px';
+                closeBtn.style.backgroundColor = '#ff6b81';
+                closeBtn.style.color = 'white';
+                closeBtn.style.fontSize = '16px';
+                closeBtn.style.fontWeight = 'bold';
+                closeBtn.style.cursor = 'pointer';
+                
+                // 닫기 버튼 누르면 팝업창 사라짐
+                closeBtn.onclick = () => {
+                    document.body.removeChild(overlay);
+                };
+
+                // 요소를 팝업창 안에 조립해서 넣기
+                overlay.appendChild(resultImg);
+                overlay.appendChild(text);
+                overlay.appendChild(closeBtn);
+                
+                // 팝업창을 화면에 띄우기
+                document.body.appendChild(overlay);
             });
         }
 
